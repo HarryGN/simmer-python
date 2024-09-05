@@ -1,6 +1,7 @@
 # pylint: disable=no-member
 
 import pygame
+import math
 
 
 pygame.init()
