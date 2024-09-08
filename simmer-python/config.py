@@ -28,7 +28,7 @@ from devices.drive import Drive
 
 # Control Flags and Setup
 rand_error = False          # Use either true random error generator (True) or repeatable error generation (False)
-rand_bias = False           # Use a randomized, normally distributed set of bias values for drives (placeholder, not implemented)
+rand_bias = True           # Use a randomized, normally distributed set of bias values for drives (placeholder, not implemented)
 bias_strength = [0.05, 1]   # How intense the random drive bias is, if enabled (placeholder, not implemented)
 
 # Network configuration for sockets
@@ -54,10 +54,12 @@ robot_start_rotation = 180      # Robot starting rotation (deg)
 robot_width = 6                 # Robot width in inches
 robot_height = 6                # Robot height in inches
 robot_outline = [               # Robot outline, relative to center position
-                pm.Vector2(-robot_width/2, -robot_width/2),
-                pm.Vector2(-robot_width/2,  robot_width/2),
-                pm.Vector2( robot_width/2,  robot_width/2),
-                pm.Vector2( robot_width/2, -robot_width/2)
+                pm.Vector2(-2.875,-4),
+                pm.Vector2(-2.875,2.75),
+                pm.Vector2(-1.655,4),
+                pm.Vector2(1.655,4),
+                pm.Vector2(2.875,2.75),
+                pm.Vector2(2.875,-4)
                 ]
 
 # Maze definition information
@@ -93,42 +95,20 @@ block_color = (127, 127, 0) # Tuple with robot perimeter color in (R,G,B) format
 ### DEVICE CONFIGURATION ###
 # Motors
 m0_info = {
-    'id': 'm0',
-    'position': [2, 0],
-    'rotation': 0,
-    'visible': True,
-    'color': (128, 128, 0)
+ 'id': 'm0',
+ 'position': [3.125, 0],
+ 'rotation': 0,
+ 'visible': True
 }
-
 m1_info = {
-    'id': 'm0',
-    'position': [-2, 0],
-    'rotation': 0,
-    'visible': True,
-    'color': (0, 128, 0)
+ 'id': 'm1',
+ 'position': [-3.125, 0],
+ 'rotation': 0,
+ 'visible': True
 }
-
-m2_info = {
-    'id': 'm0',
-    'position': [0, 2],
-    'rotation': 90,
-    'visible': True,
-    'color': (128, 0, 0)
-}
-
-m3_info = {
-    'id': 'm0',
-    'position': [0, -2],
-    'rotation': 90,
-    'visible': True,
-    'color': (0, 0, 128)
-}
-
 motors = {
-    'm0': MotorSimple(m0_info),
-    'm1': MotorSimple(m1_info),
-    'm2': MotorSimple(m2_info),
-    'm3': MotorSimple(m3_info)
+ 'm0': MotorSimple(m0_info),
+ 'm1': MotorSimple(m1_info)
 }
 
 # Drives
@@ -152,7 +132,7 @@ d0_info = {
     'visible': False,
     'velocity': [-6, 0],
     'ang_velocity': 0,
-    'motors': [motors['m2'], motors['m3']],
+    'motors': [motors['m0'], motors['m1']],
     'motor_direction': [1, 1],
     'bias': {'x': 0, 'y': 0, 'rotation': 0},
     'error': {'x': 0, 'y': 0, 'rotation': 0}
@@ -165,8 +145,8 @@ r0_info = {
     'visible': False,
     'velocity': [0, 0],
     'ang_velocity': 120,
-    'motors': [motors['m0'], motors['m1'], motors['m2'], motors['m3']],
-    'motor_direction': [1, -1, 1, -1],
+    'motors': [motors['m0'], motors['m1']],
+    'motor_direction': [1, -1],
     'bias': {'x': 0, 'y': 0, 'rotation': 0},
     'error': {'x': 0, 'y': 0, 'rotation': 0}
 }
@@ -179,66 +159,66 @@ drives = {
 
 # Sensors
 u0_info = {
-    'id': 'u0',
-    'position': [0, 3],
-    'height': 2,
-    'rotation': 0,
-    'error': 0.02,
-    'outline': [
-        pm.Vector2(-1, -0.5),
-        pm.Vector2(-1, 0.5),
-        pm.Vector2(1, 0.5),
-        pm.Vector2(1, -0.5)
-    ],
-    'visible': True,
-    'visible_measurement': True
+ 'id': 'u0',
+ 'position': [0, 3.5],
+ 'height': 1,
+ 'rotation': 0,
+ #'error': 0.02,
+ 'outline': [
+ pm.Vector2(-1, -0.5),
+ pm.Vector2(-1, 0.5),
+ pm.Vector2(1, 0.5),
+ pm.Vector2(1, -0.5)
+ ],
+ 'visible': True,
+ 'visible_measurement': True
 }
-
 u1_info = {
-    'id': 'u1',
-    'position': [3, 0],
-    'height': 2,
-    'rotation': 270,
-    'error': 0.02,
-    'outline': [
-        pm.Vector2(-1, -0.5),
-        pm.Vector2(-1, 0.5),
-        pm.Vector2(1, 0.5),
-        pm.Vector2(1, -0.5)
-    ],
-    'visible': True,
-    'visible_measurement': True
+ 'id': 'u1',
+ 'position': [-2.5, 0],
+ 'height': 1,
+ 'rotation': 90,
+ #'error': 0.02,
+ 'outline': [
+ pm.Vector2(-1, -0.5),
+ pm.Vector2(-1, 0.5),
+ pm.Vector2(1, 0.5),
+ pm.Vector2(1, -0.5)
+ ],
+ 'visible': True,
+ 'visible_measurement': True
 }
 u2_info = {
-    'id': 'u2',
-    'position': [0, -3],
-    'height': 2,
-    'rotation': 180,
-    'error': 0.02,
-    'outline': [
-        pm.Vector2(-1, -0.5),
-        pm.Vector2(-1, 0.5),
-        pm.Vector2(1, 0.5),
-        pm.Vector2(1, -0.5)
-    ],
-    'visible': True,
-    'visible_measurement': True
+ 'id': 'u2',
+ 'position': [2.5, 0],
+ 'height': 1,
+ 'rotation': -90,
+ #'error': 0.02,
+ 'outline': [
+ pm.Vector2(-1, -0.5),
+ pm.Vector2(-1, 0.5),
+ pm.Vector2(1, 0.5),
+ pm.Vector2(1, -0.5)
+ ],
+ 'visible': True,
+ 'visible_measurement': True
 }
 u3_info = {
-    'id': 'u3',
-    'position': [-3, 0],
-    'height': 2,
-    'rotation': 90,
-    'error': 0.02,
-    'outline': [
-        pm.Vector2(-1, -0.5),
-        pm.Vector2(-1, 0.5),
-        pm.Vector2(1, 0.5),
-        pm.Vector2(1, -0.5)
-    ],
-    'visible': True,
-    'visible_measurement': True
+ 'id': 'u3',
+ 'position': [0, -3.5],
+ 'height': 1,
+ 'rotation': 180,
+ #'error': 0.02,
+ 'outline': [
+ pm.Vector2(-1, -0.5),
+ pm.Vector2(-1, 0.5),
+ pm.Vector2(1, 0.5),
+ pm.Vector2(1, -0.5)
+ ],
+ 'visible': True,
+ 'visible_measurement': True
 }
+
 
 g0_info = {
     'id': 'u0',
@@ -277,12 +257,9 @@ sensors = {
     'u1': Ultrasonic(u1_info),
     'u2': Ultrasonic(u2_info),
     'u3': Ultrasonic(u3_info),
-    'g0': Gyroscope(g0_info),
-    'c0': Compass(c0_info),
-    'i0': Infrared(i0_info)
 }
 
 
 
 ### TESTING AND DEBUG SETTINGS ###
-simulate_list = ['u0', 'u1', 'u2', 'u3', 'i0']
+simulate_list = ['u0', 'u1', 'u2', 'u3']
