@@ -158,7 +158,7 @@ def correct_path(readings):
     """Adjusts the robot's path based on sensor readings to avoid close proximity to walls."""
     front, left, right, back = readings
 
-    if left < 2.7 and right >= 2.7:
+    if left < 2.7:
         print("Adjusting path: Too close to left wall, correcting right.")
         # Step 1: Small right turn
         packet_tx = packetize(CORRECT_RIGHT)
@@ -184,7 +184,7 @@ def correct_path(readings):
             print(f"Correct back left command response: {response_string(CORRECT_LEFT, responses)}")
             time.sleep(0.3)  # Wait briefly to complete turn back
 
-    elif right < 2.7 and left >= 2.7:
+    elif right < 2.7:
         print("Adjusting path: Too close to right wall, correcting left.")
         # Step 1: Small left turn
         packet_tx = packetize(CORRECT_LEFT)
@@ -290,19 +290,24 @@ def make_decision():
         print("In a dead-end. Finding the clearest direction to move.")
         # Find the direction with the largest sensor reading (most open space)
 
+        time.sleep(1)
         max_reading = max(readings)
         max_index = readings.index(max_reading)
+        print(max_reading)
+        DEAD_END_TRIAL = 0
+        while max_reading < 40:
+            
 
-        while max_reading < 6:
-            packet_tx = packetize(MOVE_FORWARD)
-            if packet_tx:
-                transmit(packet_tx)
-                [responses, time_rx] = receive()
-                print(f"Dead-end correction command response: {response_string(direction, responses)}")
-                TURN_COUNTER = 0  # Reset counter after finding a way out
-                # time.sleep(0.5)  # Allow time to move/turn appropriately
-
-        if max_reading > 6:  # Clear space detected
+            # packet_tx = packetize(MOVE_FORWARD)
+            # if packet_tx:
+            #     transmit(packet_tx)
+            #     [responses, time_rx] = receive()
+            #     print(f"Dead-end move command response: {response_string(MOVE_FORWARD, responses)}")
+            #     # TURN_COUNTER = 0  # Reset counter after finding a way out
+            #     time.sleep(0.5)  # Allow time to move/turn appropriately
+            
+            print(max_reading)
+            print(max_index)
             if max_index == 0:
                 direction = MOVE_FORWARD
             elif max_index == 1:
@@ -317,16 +322,21 @@ def make_decision():
                 transmit(packet_tx)
                 [responses, time_rx] = receive()
                 print(f"Dead-end correction command response: {response_string(direction, responses)}")
-                TURN_COUNTER = 0  # Reset counter after finding a way out
+                DEAD_END_TRIAL += 1  # Reset counter after finding a way out
                 time.sleep(0.5)  # Allow time to move/turn appropriately
-        else:
-            print("No clear path detected, stopping for safety.")
-            packet_tx = packetize(STOP)
-            if packet_tx:
-                transmit(packet_tx)
-                [responses, time_rx] = receive()
-                print(f"Stop command response: {response_string(STOP, responses)}")
-            return False  # Stop execution
+            new_readings = read_sensors()
+            max_reading = max(new_readings)
+            max_index = new_readings.index(max_reading)
+            
+        TURN_COUNTER = 0
+        # else:
+        #     print("No clear path detected, stopping for safety.")
+        #     packet_tx = packetize(STOP)
+        #     if packet_tx:
+        #         transmit(packet_tx)
+        #         [responses, time_rx] = receive()
+        #         print(f"Stop command response: {response_string(STOP, responses)}")
+        #     return False  # Stop execution
     
     # Case 3: Obstacle detected directly in front
     elif front_reading <= OBSTACLE_THRESHOLD:
