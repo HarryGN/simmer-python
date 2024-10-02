@@ -112,6 +112,7 @@ OBSTACLE_THRESHOLD = 2
 
 # Movement and turning commands
 MOVE_FORWARD = 'w0:0.5'
+MOVE_FRONT = 'w0:5'
 MOVE_BACKWARD = 'w0:-0.5'
 TURN_LEFT = 'r0:90'
 TURN_RIGHT = 'r0:-90'
@@ -228,7 +229,7 @@ def correct_path(readings):
                     [responses, time_rx] = receive()
                     print(f"Move forward 0.5 inch command response: {response_string('w0:0.5', responses)}")
                     time.sleep(0.4)  # Short wait to complete movement
-                        # Step 3: Small right turn to correct back
+                # Step 3: Small right turn to correct back
                 packet_tx = packetize(CORRECT_RIGHT)
                 if packet_tx:
                     transmit(packet_tx)
@@ -251,13 +252,14 @@ def correct_path(readings):
                     [responses, time_rx] = receive()
                     print(f"Move forward 0.5 inch command response: {response_string('w0:0.5', responses)}")
                     time.sleep(0.4)  # Short wait to complete movement
-                        # Step 3: Small right turn to correct back
+                # Step 3: Small left turn to correct back
                 packet_tx = packetize(CORRECT_LEFT)
                 if packet_tx:
                     transmit(packet_tx)
                     [responses, time_rx] = receive()
-                    print(f"Correct back right command response: {response_string(CORRECT_LEFT, responses)}")
+                    print(f"Correct back left command response: {response_string(CORRECT_LEFT, responses)}")
                     time.sleep(0.3)  # Wait briefly to complete turn back
+
 
 def make_decision():
     """Makes a decision based on sensor readings."""
@@ -290,22 +292,13 @@ def make_decision():
         print("In a dead-end. Finding the clearest direction to move.")
         # Find the direction with the largest sensor reading (most open space)
 
-        time.sleep(1)
+        # time.sleep(1)
         max_reading = max(readings)
         max_index = readings.index(max_reading)
         print(max_reading)
         DEAD_END_TRIAL = 0
-        while max_reading < 40:
-            
+        while max_reading < 45:
 
-            # packet_tx = packetize(MOVE_FORWARD)
-            # if packet_tx:
-            #     transmit(packet_tx)
-            #     [responses, time_rx] = receive()
-            #     print(f"Dead-end move command response: {response_string(MOVE_FORWARD, responses)}")
-            #     # TURN_COUNTER = 0  # Reset counter after finding a way out
-            #     time.sleep(0.5)  # Allow time to move/turn appropriately
-            
             print(max_reading)
             print(max_index)
             if max_index == 0:
@@ -323,7 +316,7 @@ def make_decision():
                 [responses, time_rx] = receive()
                 print(f"Dead-end correction command response: {response_string(direction, responses)}")
                 DEAD_END_TRIAL += 1  # Reset counter after finding a way out
-                time.sleep(0.5)  # Allow time to move/turn appropriately
+                time.sleep(1)  # Allow time to move/turn appropriately
             new_readings = read_sensors()
             max_reading = max(new_readings)
             max_index = new_readings.index(max_reading)
