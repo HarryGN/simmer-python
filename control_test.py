@@ -107,7 +107,7 @@ SIMULATE = True
 
 if SIMULATE:
     SOURCE = 'SimMeR'
-TRANSMIT_PAUSE = 0.02
+TRANSMIT_PAUSE = 0.04
 OBSTACLE_THRESHOLD = 2
 
 # Movement and turning commands
