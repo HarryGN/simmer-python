@@ -129,7 +129,30 @@ previous_readings = [None, None, None, None]
 stagnation_count = 0
 MAX_STAGNATION = 5
 
+def read_lidar_sensor():
+    """
+    Reads distance measurement from a single LiDAR sensor.
+    Assumes that the sensor is identified by 'l0'.
+    """
+    sensor_id = 'lidar'
+    packet_tx = packetize(sensor_id)  # Prepare a packet for the LiDAR sensor
+    if packet_tx:
+        transmit(packet_tx)  # Transmit the request to the LiDAR sensor
+        [responses, time_rx] = receive()  # Receive the response packet(s)
+        measured_distance = response_string(sensor_id, responses)  # Convert the response to a readable string
+        reading = extract_numeric_value(measured_distance)  # Extract the numerical distance value
+        
+        if reading is not None:
+            print(f"LiDAR {sensor_id} reading: {reading}")
+            return reading  # Return the reading if it's valid
+        
+    # If no reading is valid, return 'inf' to indicate no object detected
+    print(f"LiDAR {sensor_id} reading: No object detected within range.")
+    return float('inf')
+
+
 def read_sensors():
+    
     readings = []
     for sensor_id in ['u0', 'u1', 'u2', 'u3']:
         packet_tx = packetize(sensor_id)
@@ -266,6 +289,7 @@ def make_decision():
     global TURN_COUNTER
     
     readings = read_sensors()
+    
 
     if is_stagnant(readings):
         print("Sensor readings are stagnant. Stopping execution.")
@@ -371,8 +395,82 @@ def make_decision():
     
     return True
 
-RUN_RANDOM_MOVEMENT = True
+RUN_RANDOM_MOVEMENT = False
 while RUN_RANDOM_MOVEMENT:
     if not make_decision():
         break
     # time.sleep(0.1)
+
+
+"""
+A simple test function to read distance measurement from a LiDAR sensor.
+"""
+print(f"Testing LiDAR reading for sensor ID: l0")
+
+def decode_combined_value(combined_input):
+    '''
+    Decodes a combined string into a list of distances.
+    Each distance is represented by three characters, with one decimal place.
+    
+    Parameters:
+    - combined_input: str or list - The encoded string or list of string segments (e.g., [['li', '365083593092055087066110']]).
+    
+    Returns:
+    - list of floats representing the decoded distances.
+    '''
+    # If the input is a nested list, extract the encoded part
+    if isinstance(combined_input, list):
+        # Assume the structure [['li', '365083593092055087066110']]
+        if len(combined_input) > 0 and isinstance(combined_input[0], list) and len(combined_input[0]) > 1:
+            combined_str = combined_input[0][1]
+        else:
+            raise ValueError("Invalid input structure for decoding.")
+    else:
+        combined_str = str(combined_input)
+
+    # Ensure the combined_str is properly zero-padded if needed (length should be a multiple of 3)
+    if len(combined_str) % 3 != 0:
+        combined_str = combined_str.zfill((len(combined_str) // 3 + 1) * 3)
+    
+    # Split the combined string into groups of 3 characters each
+    decoded_distances = [
+        int(combined_str[i:i+3]) / 10.0 for i in range(0, len(combined_str), 3)
+    ]
+    
+    return decoded_distances
+
+
+
+
+# Simulate sending the packet
+packet_tx = packetize('u0')
+if packet_tx:
+    print(f"Transmitting packet: {packet_tx}")
+    transmit(packet_tx)
+    
+    # Receive the response packet
+    result = receive()
+    if result is not None:
+        [responses, time_rx] = result
+        print(f"Received response at {time_rx}: {responses}")
+
+packet_tx = packetize('li')
+if packet_tx:
+    print(f"Transmitting packet: {packet_tx}")
+    transmit(packet_tx)
+    
+    # Receive the response packet
+    result = receive()
+    if result is not None:
+        [responses, time_rx] = result
+        print(response_string("li", responses))
+        # Decode the combined value
+        print(responses)
+        decoded_distances = decode_combined_value(responses)
+        print(decoded_distances)
+        print(f"Received response at {time_rx}: {responses}")
+
+
+
+
+    
