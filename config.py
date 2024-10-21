@@ -5,6 +5,7 @@ This file stores the configuration information for the simulator.
 import pygame.math as pm
 from devices.motors import MotorSimple
 from devices.ultrasonic import Ultrasonic
+from devices.lidar import Lidar
 from devices.gyroscope import Gyroscope
 from devices.compass import Compass
 from devices.infrared import Infrared
@@ -231,15 +232,34 @@ g0_info = {
     'visible': False
 }
 
+# Define sensor information
+lidar_info = {
+    'id': 'li',
+    'position': (0, 0),  # Sensor's starting position in the environment
+    'rotation': 0,  # Initial orientation (0 degrees)
+    'visible': True,
+    'height': 2,  # Height of the sensor from the ground
+    'color': (0, 0, 255),
+    'max_range': 500,  # Maximum detection range
+    'error': 0.05,  # 5% error in distance measurements
+}
+
+
+
+# sensors = {
+#     'u0': Ultrasonic(u0_info),
+#     'u1': Ultrasonic(u1_info),
+#     'u2': Ultrasonic(u2_info),
+#     'u3': Ultrasonic(u3_info),
+#     'i0': Infrared(i0_info),
+#     'i1': Infrared(i1_info),
+#     'g0': Gyroscope(g0_info)
+# }
+
 sensors = {
     'u0': Ultrasonic(u0_info),
-    'u1': Ultrasonic(u1_info),
-    'u2': Ultrasonic(u2_info),
-    'u3': Ultrasonic(u3_info),
-    'i0': Infrared(i0_info),
-    'i1': Infrared(i1_info),
-    'g0': Gyroscope(g0_info)
+    'li': Lidar(lidar_info)
 }
 
 ### TESTING AND DEBUG SETTINGS ###
-simulate_list = ['u0', 'u1', 'u2', 'u3', 'i0', 'i1', 'g0']
+simulate_list = ["li", "u0"]
