@@ -41,7 +41,7 @@ class Lidar(Device):
         self.visible_measurement_buffer = 0
 
         # Simulation parameters
-        self.num_rays = 8                             # Number of rays (8 for 360-degree coverage)
+        self.num_rays = 30                            # Number of rays (8 for 360-degree coverage)
         self.min_range = info.get('min_range', 0)     # Minimum range in inches
         self.max_range = info.get('max_range', 433)   # Maximum range in inches
         self.error_pct = info.get('error', 0.02)      # Percent error (0-1)

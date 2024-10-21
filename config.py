@@ -262,4 +262,4 @@ sensors = {
 }
 
 ### TESTING AND DEBUG SETTINGS ###
-simulate_list = ["li", "u0"]
+simulate_list = ["li"]
