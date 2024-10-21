@@ -130,6 +130,7 @@ stagnation_count = 0
 MAX_STAGNATION = 5
 
 def read_sensors():
+    
     readings = []
     for sensor_id in ['u0', 'u1', 'u2', 'u3']:
         packet_tx = packetize(sensor_id)

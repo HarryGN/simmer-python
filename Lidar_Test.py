@@ -4,7 +4,7 @@ import numpy as np
 import time
 
 # Configure the serial port (change 'COM3' to your serial port)
-ser = serial.Serial('COM3', 115200, timeout=1)
+ser = serial.Serial('COM4', 115200, timeout=1)
 
 # Initialize data storage for 36 points (every 10 degrees)
 angles = [i * 10 for i in range(36)]  # 0, 10, 20, ..., 350
