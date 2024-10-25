@@ -170,8 +170,6 @@ previous_readings = [None, None, None, None]
 stagnation_count = 0
 MAX_STAGNATION = 5
 
-def get_lidar_data():
-
 def read_lidar_sensor():
     """
     Reads distance measurement from a single LiDAR sensor.
