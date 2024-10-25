@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import time
 
-# Configure the serial port (change 'COM3' to your serial port)
+# Configure the serial port (change 'COM8' to your serial port)
 ser = serial.Serial('COM8', 9600, timeout=1)
 
 # Initialize data storage for 36 points (every 10 degrees)
@@ -30,13 +30,27 @@ def update_plot(angles, distances):
     plt.draw()
     plt.pause(0.0001)
 
+def send_command(command):
+    ser.write((command + '\n').encode('utf-8'))  # 发送命令，确保结尾有换行符
+    print(f"Sent: {command}")
+    time.sleep(0.5)  # 等待 Arduino 回传
+
+    # 读取 Arduino 回传的信息
+    while ser.in_waiting > 0:
+        response = ser.readline().decode('utf-8', errors='ignore').strip()
+        print(f"Arduino responded: {response}")
+
+
+
 try:
     buffer = ""
     last_update = time.time()
     update_interval = 0.1  # Reduce update interval for faster refresh
+    reading_angle = True  # Flag to track if the next input is an angle
+    current_angle = 0  # Store the current angle temporarily
 
     while True:
-        # Read a larger chunk of data from the serial buffer
+        # Read data from the serial buffer
         if ser.in_waiting > 0:
             buffer += ser.read(ser.in_waiting).decode('utf-8', errors='ignore')
 
@@ -49,34 +63,42 @@ try:
             for line in lines[:-1]:
                 line = line.strip()
 
-                # Check for new scan data
-                if "New Scan" in line:
-                    print("Received new scan data.")
-
-                # Parse angle and distance data
-                if "Angle" in line:
-                    parts = line.split()
-                    try:
-                        angle = float(parts[1].strip("°"))  # Extract angle as float for non-integer values
-                        distance = float(parts[3].strip("mm")) / 10.0  # Convert distance to cm
-
+                try:
+                    # Check if we are expecting an angle or distance
+                    if reading_angle and "Angle" in line:
+                        # Parse angle value
+                        parts = line.split(":")
+                        current_angle = float(parts[1].strip())  # Extract angle as float
+                        reading_angle = False  # Next, expect a distance value
+                    elif not reading_angle and "Distance" in line:
+                        # Parse distance value
+                        parts = line.split(":")
+                        distance_mm = float(parts[1].strip().replace("mm", ""))  # Extract distance as float and remove "mm"
+                        distance = distance_mm / 10.0  # Convert distance to cm
+                        
                         # Clamp the distance between 5 and 30 cm
-                        distance = max(5, min(distance, 30))
+                        # If the distance is greater than 30, set it to 30 to plot at the edge
+                        if distance > 30:
+                            distance = 30
 
                         # Find the closest angle in the target angles list
-                        closest_index = min(range(len(angles)), key=lambda i: abs(angles[i] - angle))
+                        closest_index = min(range(len(angles)), key=lambda i: abs(angles[i] - current_angle))
                         distances[closest_index] = distance
+
+                        reading_angle = True  # Next, expect an angle value
                         new_data = True  # Mark that new data was processed
 
-                    except (ValueError, IndexError) as e:
-                        print(f"Error parsing line: {line}. Error: {e}")
+                except ValueError:
+                    print(f"Error parsing line: {line}")
 
             # Update the plot only if new data was processed and enough time has passed
             if new_data and time.time() - last_update >= update_interval:
                 update_plot(angles, distances)
                 last_update = time.time()
 
+
 except KeyboardInterrupt:
     print("Program interrupted.")
 finally:
     ser.close()  # Close the serial connection
+    print("Serial connection closed.")
