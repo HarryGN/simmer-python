@@ -153,7 +153,9 @@ def packetize(data: str):
     check_fail = any(char in data for char in forbidden)
 
     if not check_fail:
+        print(FRAMESTART + data + FRAMEEND)
         return FRAMESTART + data + FRAMEEND
+        # print(FRAMESTART + data + FRAMEEND)
 
     return False
 
@@ -205,7 +207,7 @@ PORT_RX = 61201         # The port used by the *CLIENT* to send data
 
 ### Serial Setup ###
 BAUDRATE = 9600         # Baudrate in bps
-PORT_SERIAL = 'COM3'    # COM port identification
+PORT_SERIAL = 'COM8'    # COM port identification
 TIMEOUT_SERIAL = 1      # Serial port timeout, in seconds
 
 ### Packet Framing values ###
@@ -246,11 +248,14 @@ while RUN_COMMUNICATION_CLIENT:
 
     # Send the command
     packet_tx = packetize(cmd)
+    print(cmd, packet_tx)
     if packet_tx:
         transmit(packet_tx)
+        print("sent")
 
     # Receive the response
     [responses, time_rx] = receive()
+    print(responses)
     if responses[0]:
         print(f"At time '{time_rx}' received from {SOURCE}:\n{response_string(cmd, responses)}")
     else:
