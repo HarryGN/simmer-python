@@ -199,6 +199,41 @@ def validate_responses(cmd_list: list, responses_list: list):
     return valid
 
 
+# Predefined target angles
+target_angles = [0, 45, 90, 135, 180, 225, 270, 315]
+
+def parse_lidar_data(data):
+    """
+    Parse the LiDAR distance data from Arduino.
+    Expects data in a format like: '000a0b5c0d2e...'
+    Each distance value is 4 characters (hex).
+    """
+    decoded_distances = {}
+    try:
+        # Ensure the data length is 32 characters (8 distances, each 4 characters)
+        if len(data) != 32:
+            print(f"Unexpected data length: {len(data)}. Expected 32 characters.")
+            return decoded_distances
+
+        # Iterate through the data in chunks of 4 characters (hex distances)
+        for i in range(0, len(data), 4):
+            distance_hex = data[i:i + 4]
+
+            # Convert distance from hex to integer (in mm)
+            distance_mm = int(distance_hex, 16)
+            distance_cm = distance_mm / 10.0  # Convert to cm
+
+            # Map the distance to the corresponding target angle
+            angle = target_angles[i // 4]
+            decoded_distances[angle] = distance_cm
+
+    except ValueError as e:
+        print(f"Error parsing data: {data}, Error: {e}")
+    
+    return decoded_distances
+
+
+
 ############## Constant Definitions Begin ##############
 ### Network Setup ###
 HOST = '127.0.0.1'      # The server's hostname or IP address
@@ -235,7 +270,7 @@ except serial.SerialException:
 if SIMULATE:
     TRANSMIT_PAUSE = 0.1
 else:
-    TRANSMIT_PAUSE = 0
+    TRANSMIT_PAUSE = 0.5
 
 
 
@@ -244,14 +279,26 @@ else:
 RUN_COMMUNICATION_CLIENT = True # If true, run this. If false, skip it
 while RUN_COMMUNICATION_CLIENT:
     # Input a command
-    cmd = input('Type in a string to send: ')
 
+    cmd = input('Type in a string to send: ')
+    if cmd == 'q':
+            if SER.in_waiting > 0:
+                    # Read a line from the serial buffer.
+                    raw_data = SER.readline().decode('utf-8', errors='ignore').strip()
+                    # print(f"Raw data received: {raw_data}")
+
+                    # Parse the received data.
+                    lidar_data = parse_lidar_data(raw_data)
+                    # print(f"Parsed LiDAR data: {lidar_data}")
     # Send the command
-    packet_tx = packetize(cmd)
-    print(cmd, packet_tx)
-    if packet_tx:
-        transmit(packet_tx)
-        print("sent")
+    else:
+        packet_tx = packetize(cmd)
+        print(cmd, packet_tx)
+        if packet_tx:
+            transmit(packet_tx)
+            print("sent")
+    
+
 
     # Receive the response
     [responses, time_rx] = receive()
@@ -280,25 +327,25 @@ while RUN_DEAD_RECKONING:
     if ct < len(CMD_SEQUENCE):
 
         # Check an ultrasonic sensor 'u0'
-        packet_tx = packetize('u0')
-        if packet_tx:
-            transmit(packet_tx)
-            [responses, time_rx] = receive()
-            print(f"Ultrasonic 0 reading: {response_string('u0',responses)}")
+        # packet_tx = packetize('u0')
+        # if packet_tx:
+        #     transmit(packet_tx)
+        #     [responses, time_rx] = receive()
+        #     print(f"Ultrasonic 0 reading: {response_string('u0',responses)}")
 
-        # Check an ultrasonic sensor 'u1'
-        packet_tx = packetize('u1')
-        if packet_tx:
-            transmit(packet_tx)
-            [responses, time_rx] = receive()
-            print(f"Ultrasonic 1 reading: {response_string('u1',responses)}")
+        # # Check an ultrasonic sensor 'u1'
+        # packet_tx = packetize('u1')
+        # if packet_tx:
+        #     transmit(packet_tx)
+        #     [responses, time_rx] = receive()
+        #     print(f"Ultrasonic 1 reading: {response_string('u1',responses)}")
 
-        # Check the remaining three sensors: gyroscope, compass, and IR
-        packet_tx = packetize('g0,c0,i0')
-        if packet_tx:
-            transmit(packet_tx)
-            [responses, time_rx] = receive()
-            print(f"Other sensor readings:\n{response_string('g0,c0,i0',responses)}")
+        # # Check the remaining three sensors: gyroscope, compass, and IR
+        # packet_tx = packetize('g0,c0,i0')
+        # if packet_tx:
+        #     transmit(packet_tx)
+        #     [responses, time_rx] = receive()
+        #     print(f"Other sensor readings:\n{response_string('g0,c0,i0',responses)}")
 
         # Send a drive command
         packet_tx = packetize(CMD_SEQUENCE[ct])
