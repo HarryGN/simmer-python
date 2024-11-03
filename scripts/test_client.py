@@ -241,7 +241,7 @@ PORT_TX = 61200         # The port used by the *CLIENT* to receive
 PORT_RX = 61201         # The port used by the *CLIENT* to send data
 
 ### Serial Setup ###
-BAUDRATE = 9600         # Baudrate in bps
+BAUDRATE = 115200         # Baudrate in bps
 PORT_SERIAL = 'COM8'    # COM port identification
 TIMEOUT_SERIAL = 1      # Serial port timeout, in seconds
 

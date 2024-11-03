@@ -148,7 +148,7 @@ SIMULATE = True
 
 if SIMULATE:
     SOURCE = 'SimMeR'
-TRANSMIT_PAUSE = 0.04
+TRANSMIT_PAUSE = 0.06
 OBSTACLE_THRESHOLD = 6
 
 # Movement and turning commands
@@ -377,7 +377,7 @@ def make_decision():
 
     
     # Case 1: Surrounded by walls on three sides (front, left, and right)
-    if front <= 7 and right <= 7 and left <= 7:
+    if front <= 6 and right <= 6 and left <= 6:
         print("Surrounded on three sides. Turning 180 degrees to find a clear path.")
         packet_tx = packetize(TURN_AROUND)
         if packet_tx:
