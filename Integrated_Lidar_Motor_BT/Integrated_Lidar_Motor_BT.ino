@@ -15,6 +15,18 @@ int MAX_PACKET_LENGTH = 143; // equivalent to 16 8-byte commands of format "xx:#
 int TIMEOUT = 250; // Hardware Serial timeout in milliseconds
 int BAUDRATE = 9600;
 
+// variables for obstacle avoidance
+bool continueRunning = true;
+int previous_readings[] = {0,0,0,0,0};
+int stagnation_count = 0;
+int MAX_STAGNATION = 5;
+int TURN_COUNTER = 0;
+String cmd_list[5];  // 存储最多 5 个动作指令
+int cmdIndex = 0;    // 当前命令在 cmd_list 中的位置索引
+
+int actionCounter = 0; // 动作计数器
+
+
 // RPLidar Library and Definitions
 
 #define RPLIDAR_MOTOR 7 // Control RPLIDAR motor PWM pin (MOTOCTRL).
@@ -230,35 +242,36 @@ void setID() {
 
 // Read and print data from all sensors
 float* read_sensors() {
-  // Serial.println("Start TOF");
+  Serial.println("Start TOF");
   for (int i = 0; i < 5; i++) {
     lox[i].rangingTest(&measures[i], false);
 
-    // // // Print to Serial for monitoring
-    // Serial.print(F("Sensor"));
-    // Serial.print(i + 1);
-    // Serial.print(F(": "));
+    // // Print to Serial for monitoring
+    Serial.print(F("Sensor"));
+    Serial.print(i + 1);
+    Serial.print(F(": "));
 
     // // Print to Serial3 for Bluetooth
-    Serial3.print(F("Sensor"));
-    Serial3.print(i + 1);
-    Serial3.print(F(": "));
+    // Serial3.print(F("Sensor"));
+    // Serial3.print(i + 1);
+    // Serial3.print(F(": "));
 
     if (measures[i].RangeStatus != 4) {
-      // Serial.print(measures[i].RangeMilliMeter);
-      Serial3.print(measures[i].RangeMilliMeter);
+      Serial.print(measures[i].RangeMilliMeter);
+      // Serial3.print(measures[i].RangeMilliMeter);
       distances[i] = measures[i].RangeMilliMeter;
     } else {
       distances[i] = 1000; // out of range
-      // Serial.print(F("Out of range"));
-      Serial3.print(F("Out of range"));
+      Serial.print(F("Out of range"));
+      // Serial3.print(F("Out of range"));
     }
-    // Serial.print(F(" "));
-    Serial3.print(F(" "));
+    Serial.print(F(" "));
+    // Serial3.print(F(" "));
   }
 
   // Serial.println();
-  Serial3.println();
+  // Serial3.println();
+  delay(100);
   return distances;
 
 }
@@ -313,7 +326,9 @@ void setup() {
   setID();
 }
 void loop() {
-  
+  read_sensors();
+  delay(100);
+
   packet = receiveSerial3();
   if (packet.length() > 0) {
     debugMessage("Received good packet: " + packet);
@@ -326,9 +341,26 @@ void loop() {
     debugMessage("");
   }
   // Serial.print("New_Reading");
-  read_sensors();
+  // read_sensors();
   // Serial.println(distances);
+  // if no command is received, proceed with arbitraty obstacle avoidance
+  else if (continueRunning) {
+    if (!make_decision(distances, cmd_list)) {
+      continueRunning = false; // Stop further execution if make_decision() returns false
+    }
+    actionCounter++;
+    if (actionCounter >= 5) {
+      send_and_clear_cmd_list();  // 每 5 次动作后发送并清空 cmd_list
+      actionCounter = 0;
+      actionCounter = 0; // 重置计数器
+      Serial3.print(read_lidar());
+    }
+  } 
   
+  else {
+    // Stop all motors or any other safety stop you need
+    Stop();
+  }
 }
 
 String read_lidar(){
@@ -565,3 +597,169 @@ void clearDistanceMap() {
     distanceCount[i] = 0;
   }
 }
+
+bool is_stagnant(float current_readings[], int length) {
+  bool is_same = true;
+  // Compare each element of previous_readings with current_readings
+  for (int i = 0; i < length; i++) {
+    if (previous_readings[i] != current_readings[i]) {
+      is_same = false;
+      break;
+    }
+  }
+  // Update stagnation count based on comparison
+  if (is_same) {
+    stagnation_count += 1;
+  } else {
+    stagnation_count = 0;
+  }
+  // Update previous_readings with current_readings
+  for (int i = 0; i < length; i++) {
+    previous_readings[i] = current_readings[i];
+  }
+
+  return stagnation_count >= MAX_STAGNATION;
+}
+
+void add_to_cmd_list(String cmd) {
+  if (cmdIndex < 5) {            // 检查是否超出数组长度
+    cmd_list[cmdIndex] = cmd;     // 添加命令到数组
+    cmdIndex++;                   // 更新索引位置
+  }
+}
+
+void send_and_clear_cmd_list() {
+  String commands = "";            // 创建一个用于存储所有命令的字符串
+  for (int i = 0; i < cmdIndex; i++) {
+    if (cmd_list[i] != "") {       // 确保只有非空命令被拼接
+      commands += cmd_list[i] + " ";
+    }
+  }
+  commands.trim();                 // 去除末尾多余的空格
+  Serial3.println(commands);         // 发送拼接后的命令
+  Serial.println(commands);
+  cmdIndex = 0;                    // 重置索引
+}
+
+
+
+void correct_path(float readings[]) {
+  // Unpack sensor readings
+  float left = readings[0];
+  float diag_left = readings[1];
+  float front = readings[2];
+  float diag_right = readings[3];
+  float right = readings[4];
+
+  if ((left < 55 || diag_left < 78) && right >= 55) {
+    Serial.println("Adjusting path: Too close to left wall, correcting right.");
+    // Step 1: Stop
+    Stop();
+    // Step 2: Small right turn
+    Right(5.0);
+
+  } else if ((right < 55 || diag_right < 78) && left >= 55) {
+    Serial.println("Adjusting path: Too close to right wall, correcting left.");
+    // Step 1: Stop
+    Stop();
+    // Step 2: Small right turn
+    Left(5.0);
+
+  }
+  // else if (left < 40 && right < 40) {
+  //   // Both sides have walls, try to center
+  //   if (abs(left - right) > 0.5) {  // Tolerance for centering
+  //     if (left > right) {
+  //       Serial.println("Centering: Moving slightly left.");
+  //       // Step 1: Stop
+  //       Stop();
+  //       // Step 2: Small right turn
+  //       Left(5.0);
+
+  //     } else {
+  //       Serial.println("Centering: Moving slightly right.");
+  //       // Step 1: Stop
+  //       Stop();
+  //       // Step 2: Small right turn
+  //       Right(5.0);
+  //     }
+  //   }
+  // }
+}
+
+bool make_decision(float readings[], String cmd_list[]) {
+  // Unpack sensor readings
+  float left = readings[0];
+  float diag_left = readings[1];
+  float front = readings[2];
+  float diag_right = readings[3];
+  float right = readings[4];
+
+  if (is_stagnant(readings, 5)) {
+    Serial.println("Sensor readings are stagnant. Stopping execution.");
+    return false;
+  }
+
+  // Case 1: surrounded on 3 sides
+  if (front <= 80 && left <= 80 && right <= 80) {
+    Serial.println("Obstacle detected on three sides. Stopping.");
+    Stop();
+    Back(1.0); // Move back to create space
+    Right(180.0); // Turn around
+    delay(2000);
+    add_to_cmd_list("Back 1.0");
+    add_to_cmd_list("Right 180.0");
+    TURN_COUNTER++;
+  }
+  // Case 2: going back and forth in hallway
+  else if ((left >= 35 || right >= 35) && TURN_COUNTER >= 2) {
+    Serial.println("Dead-end detected. Attempting to escape.");
+    float max_reading = max(left, right);
+    Forward(4.0);
+    delay(2000);
+    if (max_reading == left) {
+      Left(90.0);
+      add_to_cmd_list("Forward 4.0");
+      add_to_cmd_list("Left 90.0");
+    } else {
+      Right(90.0);
+      add_to_cmd_list("Forward 4.0");
+      add_to_cmd_list("Right 90.0");
+    }
+    TURN_COUNTER = 0;
+  }
+  // Case 3: obstacle in front
+  else if (front <= 80) {
+    Serial.println("Obstacle detected in front. Stopping and turning.");
+    Stop();
+    Back(1.0);
+    if (left > right) {
+      Left(90.0);
+      add_to_cmd_list("Back 1.0");
+      add_to_cmd_list("Left 90.0");
+    } else {
+      Right(90.0);
+      add_to_cmd_list("Back 1.0");
+      add_to_cmd_list("Right 90.0");
+    }
+  } else if (diag_left <= 80) {
+    Serial.println("Diagonal obstacle on left. Correcting path.");
+    Stop();
+    Back(1.0);
+    Right(10.0);
+    add_to_cmd_list("Back 0.98");
+  } else if (diag_right <= 80) {
+    Serial.println("Diagonal obstacle on right. Correcting path.");
+    Stop();
+    Back(1.0);
+    Left(10.0);
+    add_to_cmd_list("Back 0.98");
+  } else {
+    correct_path(readings);
+    Forward(2.0); // Move forward if path is clear
+    add_to_cmd_list("Forward 2.0");
+  }
+  
+  return true;
+}
+
