@@ -45,7 +45,7 @@ def receive_feedback(line):
 def receive_lidar_data(line):
     """Parse a line of LIDAR data from Arduino and convert to list of distances."""
     if line.startswith("lr:"):
-        hex_data = line[3:-4]
+        hex_data = line[3:]
         distances = []
         try:
             for i in range(0, len(hex_data), 4):  # Each distance value is 4 hex digits
@@ -53,15 +53,15 @@ def receive_lidar_data(line):
                 distance_mm = int(hex_value, 16)
 
                 # Convert mm to cm and filter invalid data
-                distance_cm = -1 if distance_mm == 65535 else distance_mm / 10
-                distances.append(distance_cm)
+                distance_inch = -1 if distance_mm == 65535 else round(distance_mm / 25.4, 1)
+                distances.append(distance_inch)
         except ValueError:
             print("Invalid HEX data received, skipping line...")
             return None  # Return None on invalid data
 
-        print("Distances in cm:", distances)
+        print("Distances in inch:", distances)
         # Check if all valid distances are within 150 cm
-        if all(0 <= d < 150 for d in distances if d != -1):
+        if all(0 <= d < 9999 for d in distances if d != -1):
             return distances  # Return distances if all are within 150 cm
         else:
             print("Not all distances are within 150 cm, continuing to pull data...")
