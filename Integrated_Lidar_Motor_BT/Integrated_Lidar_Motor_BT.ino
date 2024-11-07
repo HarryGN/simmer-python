@@ -21,7 +21,7 @@ int previous_readings[] = {0,0,0,0,0};
 int stagnation_count = 0;
 int MAX_STAGNATION = 5;
 int TURN_COUNTER = 0;
-String cmd_list[3];  // 存储最多 5 个动作指令
+String cmd_list[5];  // 存储最多 5 个动作指令
 int cmdIndex = 0;    // 当前命令在 cmd_list 中的位置索引
 bool foundC = false;
 
@@ -190,13 +190,19 @@ String parseCmd(String cmdString) {
   if (cmdID == "xx") {
     stopFlag = true;
     Stop();
+    Stop();
+    Stop();
+    Stop();
+    Stop();
+    delay(1000);
     Serial.println("Motors stopped");
   }
   
   if (cmdID == "xxx") {
     stopFlag = true;
-    delay(1000000);
-    Serial.println("At target");
+    Stop();
+    delay(10000);
+    Serial3.println("At target");
     
   } else if (cmdID.charAt(0) == 'w') {
     msg_val = data; 
@@ -279,7 +285,7 @@ float* read_sensors() {
 
   // Serial.println();
   // Serial3.println();
-  delay(100);
+  // delay(100);
   return distances;
 
 }
@@ -335,7 +341,7 @@ void setup() {
 }
 void loop() {
   read_sensors();
-  delay(100);
+  // delay(100);
 
   packet = receiveSerial3();
   if (packet.length() > 0) {
@@ -357,7 +363,7 @@ void loop() {
       continueRunning = false; // Stop further execution if make_decision() returns false
     }
     actionCounter++;
-    if (actionCounter >= 3) {
+    if (actionCounter >= 5) {
       send_and_clear_cmd_list();  // 每 5 次动作后发送并清空 cmd_list
       actionCounter = 0;
       actionCounter = 0; // 重置计数器
@@ -456,11 +462,12 @@ void Forward(float forInches)
   // Stop motor when the target distance is reached or stopFlag is set
   Stop();
 
-  delay(500);
+  // delay(500);
 }
 
 void Back(float backInches)
 {
+  delay(100);
   motCount_r = 0;    // reset encoder count before start command
   motCount_l = 0;
   while (!stopFlag && (motCount_l > (count1inch * -backInches)) && motCount_r < (count1inch * backInches)) {
@@ -480,7 +487,7 @@ void Back(float backInches)
   }
   // Stop motor when the target distance is reached or stopFlag is set
   Stop();
-  delay(500);
+  // delay(500);
 }
 
 void Left(float leftDeg)
@@ -494,7 +501,7 @@ void Left(float leftDeg)
     digitalWrite(in3, HIGH);
     digitalWrite(in4, LOW);
     analogWrite(enA, 200);  // motor speed (PWM value between 0-255)
-    analogWrite(enB, 220);  // motor speed (PWM value between 0-255)
+    analogWrite(enB, 215);  // motor speed (PWM value between 0-255)
 
     // If stopFlag is true, stop the motors immediately
     if (stopFlag) {
@@ -505,7 +512,7 @@ void Left(float leftDeg)
   // Stop motor when the target distance is reached or stopFlag is set
   Stop();
 
-  delay(500);
+  // delay(500);
 }
 
 void Right(float rightDeg)
@@ -518,7 +525,7 @@ void Right(float rightDeg)
     digitalWrite(in2, LOW);
     digitalWrite(in3, LOW);
     digitalWrite(in4, HIGH);
-    analogWrite(enA, 200);  // motor speed (PWM value between 0-255)
+    analogWrite(enA, 190);  // motor speed (PWM value between 0-255)
     analogWrite(enB, 220);  // motor speed (PWM value between 0-255)
 
     // If stopFlag is true, stop the motors immediately
@@ -659,14 +666,14 @@ void correct_path(float readings[]) {
   float diag_right = readings[3];
   float right = readings[4];
 
-  if ((left < 30 || diag_left < 42) && right >= 30) {
+  if ((left < 55 || diag_left < 65) && right >= 55) {
     Serial.println("Adjusting path: Too close to left wall, correcting right.");
     // Step 1: Stop
     Stop();
     // Step 2: Small right turn
     Right(5.0);
 
-  } else if ((right < 30 || diag_right < 42) && left >= 30) {
+  } else if ((right < 55 || diag_right < 65) && left >= 55) {
     Serial.println("Adjusting path: Too close to right wall, correcting left.");
     // Step 1: Stop
     Stop();
@@ -708,26 +715,35 @@ bool make_decision(float readings[], String cmd_list[]) {
     return false;
   }
 
+  if (foundC){
+    Serial3.println(read_lidar());
+    Stop();
+    add_to_cmd_list("Forward 0");
+    send_and_clear_cmd_list();
+    receiveSerial3();
+    foundC = false;
+  }
   // Case 1: surrounded on 3 sides
-  // if (front <= 80 && left <= 80 && right <= 80 && diag_left <= 120 && diag_right <= 120 ) {
-  //   Serial.println("Obstacle detected on three sides. Stopping.");
-  //   Stop();
-  //   Back(1.0); // Move back to create space
-  //   Right(180.0); // Turn around
-  //   delay(2000);
-  //   add_to_cmd_list("Back 1.0");
-  //   add_to_cmd_list("Right 180.0");
-  //   TURN_COUNTER++;
-  // }
+  if (front <= 60 && left <= 60 && right <= 60 && diag_left <= 84 && diag_right <= 84 ) {
+    Serial3.println("Target Arrived. Stopping.");
+    Stop();
+    // Back(1.0); // Move back to create space
+    // Right(180.0); // Turn around
+    delay(2000000);
+    // add_to_cmd_list("Back 1.0");
+    // add_to_cmd_list("Right 180.0");
+  }
   if (foundC == false && (front > 600 && front < 800) && left > 300 && right > 300){
     Serial.println("posC");
     Serial3.println("posC");
     Stop();
+    Stop();
+    Stop();
+    Stop();
     foundC = true;
-    delay(10000);
   }
   // Case 2: going back and forth in hallway
-  else if ((left >= 35 || right >= 35) && TURN_COUNTER >= 2) {
+  else if ((left >= 45 || right >= 45) && TURN_COUNTER >= 2) {
     Serial.println("Dead-end detected. Attempting to escape.");
     float max_reading = max(left, right);
     Forward(4.0);
@@ -744,7 +760,7 @@ bool make_decision(float readings[], String cmd_list[]) {
     TURN_COUNTER = 0;
   }
   // Case 3: obstacle in front
-  else if (front <= 90) {
+  else if (front <= 100) {
     Serial.println("Obstacle detected in front. Stopping and turning.");
     Stop();
     Back(1.0);
@@ -757,16 +773,16 @@ bool make_decision(float readings[], String cmd_list[]) {
       add_to_cmd_list("Back 1.0");
       add_to_cmd_list("Right 90.0");
     }
-  } else if (diag_left <= 80) {
+  } else if (diag_left <= 68) {
     Serial.println("Diagonal obstacle on left. Correcting path.");
     Stop();
-    Back(1.0);
+    Back(0.5);
     Right(10.0);
     add_to_cmd_list("Back 0.98");
-  } else if (diag_right <= 80) {
+  } else if (diag_right <= 68) {
     Serial.println("Diagonal obstacle on right. Correcting path.");
     Stop();
-    Back(1.0);
+    Back(0.5);
     Left(10.0);
     add_to_cmd_list("Back 0.98");
   } else {
