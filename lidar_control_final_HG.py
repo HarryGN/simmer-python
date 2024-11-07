@@ -719,7 +719,7 @@ def receive_lidar_data(line):
 def update_orientation_toward_target(current_orientation, target_orientation):
     """Update orientation by rotating toward the target orientation."""
     while current_orientation != target_orientation:
-        transmit(packetize("xxx"))
+        transmit(packetize("xx"))
         # Calculate the angular difference, normalized to -180 to 180 range
         angle_diff = (target_orientation - current_orientation + 180) % 360 - 180
         
@@ -735,15 +735,15 @@ def update_orientation_toward_target(current_orientation, target_orientation):
         elif angle_diff == -90:
             cmd = TURN_LEFT
 
-        else:
+        elif angle_diff == 45:
             cmd = 'r0: 45'
         # Transmit rotation command
-        packet_tx = packetize(f"{cmd}")
-        if packet_tx:
-            transmit(packet_tx)
-            responses = receive()
-            print(f"Turn to target orientation response: {response_string(cmd, responses)}")
-            time.sleep(2.5)  # Small delay to complete the rotation
+        print("difference is", target_orientation - current_orientation)
+        print("calculated difference", angle_diff)
+        print("command sent to arduino is", cmd)
+        transmit(packetize(cmd))
+        # print(f"Turning to target orientation response: {response_string(cmd, responses)}")
+        time.sleep(5)  # Small delay to complete the rotation
         _, current_orientation =run_localization(ser)
 
 
@@ -785,7 +785,7 @@ loadingZone = [
     2, 14, 26, 38, 50, 62,
     3, 15, 27, 39, 51, 63,
     4, 16, 28, 40, 52, 64,
-    5, 17, 29, 41, 53, 65
+    5, 17, 29, 41, 53, 65,
 ]
 
 # Lookup list for pos2
@@ -938,6 +938,31 @@ position_orientation_map = {
 def get_target_orientation(position_group):
     return position_orientation_map.get(position_group, None)  # Return None if the group is not defined
 
+def turn_2_target_from_pos2(target_orientation, current_orientation):
+    angle_diff = (target_orientation - current_orientation + 180) % 360 - 180
+        
+    # Decide rotation direction based on angle_diff
+    if angle_diff == 180 or angle_diff == -180:
+        # Turn left if target is counterclockwise from current
+        cmd = TURN_AROUND
+
+    elif angle_diff == 90:
+        # Turn right if target is clockwise from current
+        cmd = TURN_RIGHT
+        
+    elif angle_diff == -90:
+        cmd = TURN_LEFT
+
+    elif angle_diff == 45:
+        cmd = 'r0: 45'
+    # Transmit rotation command
+    packet_tx = packetize(f"{cmd}")
+    if packet_tx:
+        transmit(packet_tx)
+        responses = receive()
+        print("turning", cmd)
+        print(f"Turn to B1 orientation response: {response_string(cmd, responses)}")
+
 if __name__ == "__main__":
     # variables initialization
     
@@ -948,7 +973,7 @@ if __name__ == "__main__":
 
 
 
-    # lidar_data_32 = Tru
+    # lidar_data_32 = True
     try: 
         # 配置串口连接（将 'COM8' 替换为实际端口）
         ser = serial.Serial('COM8', 115200, timeout=1)
@@ -964,12 +989,13 @@ if __name__ == "__main__":
             if pos_key == 'loadingZone':
                 break
             target_orientation = get_target_orientation(pos_key)
+            transmit(packetize("xx"))
             print(target_orientation)
             current_orientation, aligned = update_orientation_toward_target(current_orientation, target_orientation)
 
             updated_position_index, current_orientation = run_localization(ser)
 
-        transmit(packetize('r0: 360'))
+        transmit(packetize('r0: 380'))
         print("LZ arrived, heading to positionC")
 
         # while updated_position_index in loadingZone:
@@ -991,7 +1017,7 @@ if __name__ == "__main__":
             if line.startswith("posC"): 
                 notposC = False
                 print('notposC reading', notposC, line)
-
+                break
         #     pos_key, current_orientation = ensure_position_stability(ser)
         # # Rotate toward target until aligned
         #     print(pos_key)
@@ -1000,28 +1026,28 @@ if __name__ == "__main__":
         #         current_orientation, aligned = update_orientation_toward_target(current_orientation, target_orientation)
             updated_position_index, current_orientation = run_localization(ser)
             print("looking for posC")
+        # transmit(packetize("xxx"))
+        print('posC now')
 
         if target == 'B1':
-            
-                
-            transmit(packetize("xxx"))
-            print('posC now')
-            current_orientation, aligned = update_orientation_toward_target(current_orientation, 0)
+            transmit(packetize("r0: -90"))
+            transmit(packetize("w0: 13"))
             print("arrived B1")
-            transmit(packetize('xxx'))
+            
+
 
         elif target == 'B2':
-            while updated_position_index not in posC:
-                updated_position_index, current_orientation = run_localization(ser)
+            transmit(packetize("r0: 90"))
+            transmit(packetize("w0: 6"))
+            pos_key = ''
+            updated_position_index, current_orientation = run_localization(ser)
+            while pos_key != "pos1":
+                pos_key, current_orientation = ensure_position_stability(ser)
             transmit(packetize("xx"))
-            current_orientation, aligned = update_orientation_toward_target(current_orientation, 180)
-            while updated_position_index not in pos1:
-                updated_position_index, current_orientation = run_localization(ser)
-            transmit(packetize("xx"))
-            current_orientation, aligned = update_orientation_toward_target(current_orientation, 0)
-            time.sleep(4)
+            transmit(packetize("r0: 90"))
+            transmit(packetize("w0: 13"))
             print("arrived B2")
-            transmit(packetize('xxx'))
+            
 
         elif target == 'B3':
             while updated_position_index not in posC:
