@@ -21,8 +21,9 @@ int previous_readings[] = {0,0,0,0,0};
 int stagnation_count = 0;
 int MAX_STAGNATION = 5;
 int TURN_COUNTER = 0;
-String cmd_list[5];  // 存储最多 5 个动作指令
+String cmd_list[3];  // 存储最多 5 个动作指令
 int cmdIndex = 0;    // 当前命令在 cmd_list 中的位置索引
+bool foundC = false;
 
 int actionCounter = 0; // 动作计数器
 
@@ -190,6 +191,13 @@ String parseCmd(String cmdString) {
     stopFlag = true;
     Stop();
     Serial.println("Motors stopped");
+  }
+  
+  if (cmdID == "xxx") {
+    stopFlag = true;
+    delay(1000000);
+    Serial.println("At target");
+    
   } else if (cmdID.charAt(0) == 'w') {
     msg_val = data; 
     if (msg_val < 0) {
@@ -349,11 +357,11 @@ void loop() {
       continueRunning = false; // Stop further execution if make_decision() returns false
     }
     actionCounter++;
-    if (actionCounter >= 5) {
+    if (actionCounter >= 3) {
       send_and_clear_cmd_list();  // 每 5 次动作后发送并清空 cmd_list
       actionCounter = 0;
       actionCounter = 0; // 重置计数器
-      Serial3.print(read_lidar());
+      Serial3.println(read_lidar());
     }
   } 
   
@@ -651,14 +659,14 @@ void correct_path(float readings[]) {
   float diag_right = readings[3];
   float right = readings[4];
 
-  if ((left < 55 || diag_left < 78) && right >= 55) {
+  if ((left < 30 || diag_left < 42) && right >= 30) {
     Serial.println("Adjusting path: Too close to left wall, correcting right.");
     // Step 1: Stop
     Stop();
     // Step 2: Small right turn
     Right(5.0);
 
-  } else if ((right < 55 || diag_right < 78) && left >= 55) {
+  } else if ((right < 30 || diag_right < 42) && left >= 30) {
     Serial.println("Adjusting path: Too close to right wall, correcting left.");
     // Step 1: Stop
     Stop();
@@ -701,15 +709,22 @@ bool make_decision(float readings[], String cmd_list[]) {
   }
 
   // Case 1: surrounded on 3 sides
-  if (front <= 80 && left <= 80 && right <= 80) {
-    Serial.println("Obstacle detected on three sides. Stopping.");
+  // if (front <= 80 && left <= 80 && right <= 80 && diag_left <= 120 && diag_right <= 120 ) {
+  //   Serial.println("Obstacle detected on three sides. Stopping.");
+  //   Stop();
+  //   Back(1.0); // Move back to create space
+  //   Right(180.0); // Turn around
+  //   delay(2000);
+  //   add_to_cmd_list("Back 1.0");
+  //   add_to_cmd_list("Right 180.0");
+  //   TURN_COUNTER++;
+  // }
+  if (foundC == false && (front > 600 && front < 800) && left > 300 && right > 300){
+    Serial.println("posC");
+    Serial3.println("posC");
     Stop();
-    Back(1.0); // Move back to create space
-    Right(180.0); // Turn around
-    delay(2000);
-    add_to_cmd_list("Back 1.0");
-    add_to_cmd_list("Right 180.0");
-    TURN_COUNTER++;
+    foundC = true;
+    delay(10000);
   }
   // Case 2: going back and forth in hallway
   else if ((left >= 35 || right >= 35) && TURN_COUNTER >= 2) {
@@ -729,7 +744,7 @@ bool make_decision(float readings[], String cmd_list[]) {
     TURN_COUNTER = 0;
   }
   // Case 3: obstacle in front
-  else if (front <= 80) {
+  else if (front <= 90) {
     Serial.println("Obstacle detected in front. Stopping and turning.");
     Stop();
     Back(1.0);

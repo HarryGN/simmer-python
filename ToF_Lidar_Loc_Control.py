@@ -289,25 +289,6 @@ def extract_numeric_value(response_string: str) -> float:
         return float(match.group(1))
     return None
 
-
-
-
-def read_sensors():
-    
-    readings = []
-    for sensor_id in ['u0', 'u1', 'u2', 'u3']:
-        packet_tx = packetize(sensor_id)
-        if packet_tx:
-            transmit(packet_tx)
-            # [responses, time_rx] = receive()
-            measured_distance = response_string(sensor_id, responses)
-            reading = extract_numeric_value(measured_distance)
-            if reading is not None:
-                readings.append(reading)
-            print(f"Ultrasonic {sensor_id} reading: {reading}")
-    
-    return readings if readings else [float('inf')] * 4
-
 def is_stagnant(current_readings):
     global previous_readings, stagnation_count
 
