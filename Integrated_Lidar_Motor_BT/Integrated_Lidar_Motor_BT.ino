@@ -25,7 +25,11 @@ String cmd_list[5];  // 存储最多 5 个动作指令
 int cmdIndex = 0;    // 当前命令在 cmd_list 中的位置索引
 bool foundC = false;
 bool foundB2 = false;
-
+bool foundC2 = false;
+int b2count = 0;
+int c2count = 0;
+String target;
+bool CompleteStop = false;
 
 int actionCounter = 0; // 动作计数器
 
@@ -176,12 +180,32 @@ String parseCmd(String cmdString) {
   if (cmdString.length() >= 4) {
     data = cmdString.substring(3).toDouble();
   }
-
+  
   if (cmdID == "ld") {
     bool led_state = digitalRead(LED_BUILTIN);
     digitalWrite(LED_BUILTIN, !led_state);
     return cmdID + ':' + (!led_state ? "True" : "False");
   }
+
+  if (cmdID == "B2") {
+    target = "B2";
+    // return target;
+  }
+  if (cmdID == "B1") {
+    target = "B1";
+    // return target;
+  }
+
+  if (cmdID == "B3") {
+    target = "B3";
+    // return target;
+  }
+
+  if (cmdID == "B4") {
+    target = "B4";
+    // return target;
+  }
+
 
   if (cmdID == "lr") {
     String lidarData = read_lidar();  // Now read_lidar returns a String
@@ -193,39 +217,16 @@ String parseCmd(String cmdString) {
     stopFlag = true;
     Stop();
     Stop();
-    Stop();
-    Stop();
-    Stop();
-    Stop();
-    Stop();
-    Stop();
-    Stop();
-    Stop();
-    Stop();
-    Stop();
-    Stop();
-    Stop();
     // delay(200);
     Serial.println("Motors stopped");
   }
   
-  if (cmdID == "xxx") {
+  if (cmdID == "AT") {
     stopFlag = true;
     Stop();
     Stop();
-    Stop();
-    Stop();
-    Stop();
-    Stop();
-    Stop();
-    Stop();
-    Stop();
-    Stop();
-    Stop();
-    Stop();
-    Stop();
-    Stop();
-    delay(1000);
+    delay(100000);
+    continueRunning = false;
     Serial3.println("At target");
     
   } else if (cmdID.charAt(0) == 'w') {
@@ -387,7 +388,7 @@ void loop() {
       continueRunning = false; // Stop further execution if make_decision() returns false
     }
     actionCounter++;
-    if (actionCounter >= 3) {
+    if (actionCounter >= 2) {
       send_and_clear_cmd_list();  // 每 5 次动作后发送并清空 cmd_list
       actionCounter = 0;
       actionCounter = 0; // 重置计数器
@@ -695,18 +696,18 @@ void correct_path(float readings[]) {
     // Step 1: Stop
     Stop();
     // Step 2: Small right turn
-    Right(5.0);
+    Right(3.0);
     Forward(0.5);
-    Left(3.0);
+
 
   } else if ((right < 47 || diag_right < 60) && left >= 47) {
     Serial.println("Adjusting path: Too close to right wall, correcting left.");
     // Step 1: Stop
     Stop();
     // Step 2: Small right turn
-    Left(5.0);
+    Left(3.0);
     Forward(0.5);
-    Right(3.0);
+
 
   }
   // else if (left < 40 && right < 40) {
@@ -743,47 +744,113 @@ bool make_decision(float readings[], String cmd_list[]) {
     return false;
   }
 
-  if (foundC){
+  if (foundC && b2count == 0){
     Serial3.println(read_lidar());
     Stop();
     Forward(0.3);
     add_to_cmd_list("Forward 0.3");
     send_and_clear_cmd_list();
-    receiveSerial3();
-    foundC = false;
+    // if target is B2
+    if (target == "B2"){
+      Right(90);
+      b2count ++ ;
+    }
+    else if (target == "B1"){
+      Left(90);
+      b2count ++ ;
+    }
+    else if (target == "B3"){
+      Forward(2);
+      b2count ++ ;
+    }
+    foundB2 = false;
   }
 
-  if (foundB2){
+    if (foundC2 && c2count == 0){
+    Serial3.println(read_lidar());
+    Stop();
+    Forward(0.3);
+    add_to_cmd_list("Forward 0.3");
+    send_and_clear_cmd_list();
+    Left(90);
+    c2count ++;
+    foundC2 = false;
+    Serial.println("r-90@C2");
+  }
+
+  // if (foundC2 && c2count == 1){
+  //   Serial3.println(read_lidar());
+  //   Stop();
+  //   Forward(0.3);
+  //   add_to_cmd_list("Forward 0.3");
+  //   send_and_clear_cmd_list();
+
+  //   // if (target == "B2"){
+  //   //   Right(180);
+  //   //   c2count ++ ;
+  //   //   b2count ++;
+  //   // }
+  //   // else if (target == "B1"){
+  //   //   // Forward(2);
+  //   //   c2count ++ ;
+  //   // }
+  //   // else if (target == "B3"){
+  //   //   Right(90);
+  //   //   c2count ++ ;
+  //   // }
+
+  //   foundC2 = false;
+  //   Serial.println("r-90@C2");
+  // }
+
+  if (foundB2 && b2count == 1){
     Serial3.println(read_lidar());
     add_to_cmd_list("Forward 0");
     Forward(0.5);
     send_and_clear_cmd_list();
+    if (target == "B2"){
+      Right(90);
+      Forward(4);
+      
+      b2count ++ ;
+      stopFlag = true;
+      Stop();
+      delay(10000000);
+    }
+    
     receiveSerial3();
     foundB2 = false;
   }
   // Case 1: surrounded on 3 sides
-  if (front <= 60 && left <= 60 && right <= 60 && diag_left <= 84 && diag_right <= 84 ) {
-    Serial3.println("Target Arrived. Stopping.");
-    Stop();
-    // Back(1.0); // Move back to create space
-    // Right(180.0); // Turn around
-    delay(2000000);
-    // add_to_cmd_list("Back 1.0");
-    // add_to_cmd_list("Right 180.0");
-  }
+  // if (front <= 150 && left <= 90 && right <= 90 && diag_left <= 170 && diag_right <= 170 ) {
+  //   Serial3.println("Target Arrived. Stopping.");
+  //   Stop();
+  //   // Back(1.0); // Move back to create space
+  //   // Right(180.0); // Turn around
+  //   delay(2000000);
+  //   // add_to_cmd_list("Back 1.0");
+  //   // add_to_cmd_list("Right 180.0");
+  // }
 
- if (foundB2 == false && left < 120 && (right > 250 && right < 500) && (front < 1000 && front > 650)) {
+ if (foundB2 == false && left < 120 && (right > 250 && right < 500) && (front < 850 && front > 650)) {
     Serial3.println("B2");
     Stop();  // 只调用一次 Stop
     foundB2 = true;
 }
 
-if (foundC == false && (front > 500 && front < 800) && (left > 300 && left < 500) && (right > 300) ){
+if (foundC == false && (front > 700 && front < 850) && (left > 300 && left < 500) && (right > 300) ){
     Serial.println("posC");
     Serial3.println("posC");
     Stop();  // 只调用一次 Stop
     foundC = true;
 }
+
+// if (foundC2 == false && (front > 300 && front < 450) && (left > 600 && left < 900) && (right > 600) ){
+//     Serial.println("posC2");
+//     Serial3.println("posC2");
+//     Stop();  // 只调用一次 Stop
+//     foundC2 = true;
+// }
 
   // Case 2: going back and forth in hallway
   else if ((left >= 45 || right >= 45) && TURN_COUNTER >= 2) {
@@ -803,26 +870,37 @@ if (foundC == false && (front > 500 && front < 800) && (left > 300 && left < 500
     TURN_COUNTER = 0;
   }
   // Case 3: obstacle in front
-  else if (front <= 100) {
+  else if (front <= 120) {
     Serial.println("Obstacle detected in front. Stopping and turning.");
     Stop();
     Back(1.0);
-    if (left > right) {
+    if (left > right or target == "B3") {
       Left(90.0);
       add_to_cmd_list("Back 1.0");
       add_to_cmd_list("Left 90.0");
-    } else {
+      if(target == "B3"){
+        Serial3.println("B3");
+      }
+      
+    } 
+
+
+    else if (target == "B4"){
+      Right(90);
+      Serial3.println("B4");
+    }
+    else {
       Right(90.0);
       add_to_cmd_list("Back 1.0");
       add_to_cmd_list("Right 90.0");
     }
-  } else if (diag_left <= 65) {
+  } else if (diag_left <= 70) {
     Serial.println("Diagonal obstacle on left. Correcting path.");
     Stop();
     Back(1);
     Right(10.0);
     add_to_cmd_list("Back 0.98");
-  } else if (diag_right <= 65) {
+  } else if (diag_right <= 70) {
     Serial.println("Diagonal obstacle on right. Correcting path.");
     Stop();
     Back(1);
