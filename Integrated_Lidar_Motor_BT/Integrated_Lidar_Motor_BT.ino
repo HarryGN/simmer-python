@@ -24,6 +24,8 @@ int TURN_COUNTER = 0;
 String cmd_list[5];  // 存储最多 5 个动作指令
 int cmdIndex = 0;    // 当前命令在 cmd_list 中的位置索引
 bool foundC = false;
+bool foundB2 = false;
+
 
 int actionCounter = 0; // 动作计数器
 
@@ -194,14 +196,36 @@ String parseCmd(String cmdString) {
     Stop();
     Stop();
     Stop();
-    delay(1000);
+    Stop();
+    Stop();
+    Stop();
+    Stop();
+    Stop();
+    Stop();
+    Stop();
+    Stop();
+    Stop();
+    // delay(200);
     Serial.println("Motors stopped");
   }
   
   if (cmdID == "xxx") {
     stopFlag = true;
     Stop();
-    delay(10000);
+    Stop();
+    Stop();
+    Stop();
+    Stop();
+    Stop();
+    Stop();
+    Stop();
+    Stop();
+    Stop();
+    Stop();
+    Stop();
+    Stop();
+    Stop();
+    delay(1000);
     Serial3.println("At target");
     
   } else if (cmdID.charAt(0) == 'w') {
@@ -363,7 +387,7 @@ void loop() {
       continueRunning = false; // Stop further execution if make_decision() returns false
     }
     actionCounter++;
-    if (actionCounter >= 5) {
+    if (actionCounter >= 3) {
       send_and_clear_cmd_list();  // 每 5 次动作后发送并清空 cmd_list
       actionCounter = 0;
       actionCounter = 0; // 重置计数器
@@ -501,7 +525,7 @@ void Left(float leftDeg)
     digitalWrite(in3, HIGH);
     digitalWrite(in4, LOW);
     analogWrite(enA, 200);  // motor speed (PWM value between 0-255)
-    analogWrite(enB, 215);  // motor speed (PWM value between 0-255)
+    analogWrite(enB, 210);  // motor speed (PWM value between 0-255)
 
     // If stopFlag is true, stop the motors immediately
     if (stopFlag) {
@@ -666,19 +690,23 @@ void correct_path(float readings[]) {
   float diag_right = readings[3];
   float right = readings[4];
 
-  if ((left < 55 || diag_left < 65) && right >= 55) {
+  if ((left < 47 || diag_left < 60) && right >= 47) {
     Serial.println("Adjusting path: Too close to left wall, correcting right.");
     // Step 1: Stop
     Stop();
     // Step 2: Small right turn
     Right(5.0);
+    Forward(0.5);
+    Left(3.0);
 
-  } else if ((right < 55 || diag_right < 65) && left >= 55) {
+  } else if ((right < 47 || diag_right < 60) && left >= 47) {
     Serial.println("Adjusting path: Too close to right wall, correcting left.");
     // Step 1: Stop
     Stop();
     // Step 2: Small right turn
     Left(5.0);
+    Forward(0.5);
+    Right(3.0);
 
   }
   // else if (left < 40 && right < 40) {
@@ -718,10 +746,20 @@ bool make_decision(float readings[], String cmd_list[]) {
   if (foundC){
     Serial3.println(read_lidar());
     Stop();
-    add_to_cmd_list("Forward 0");
+    Forward(0.3);
+    add_to_cmd_list("Forward 0.3");
     send_and_clear_cmd_list();
     receiveSerial3();
     foundC = false;
+  }
+
+  if (foundB2){
+    Serial3.println(read_lidar());
+    add_to_cmd_list("Forward 0");
+    Forward(0.5);
+    send_and_clear_cmd_list();
+    receiveSerial3();
+    foundB2 = false;
   }
   // Case 1: surrounded on 3 sides
   if (front <= 60 && left <= 60 && right <= 60 && diag_left <= 84 && diag_right <= 84 ) {
@@ -733,15 +771,20 @@ bool make_decision(float readings[], String cmd_list[]) {
     // add_to_cmd_list("Back 1.0");
     // add_to_cmd_list("Right 180.0");
   }
-  if (foundC == false && (front > 600 && front < 800) && left > 300 && right > 300){
+
+ if (foundB2 == false && left < 120 && (right > 250 && right < 500) && (front < 1000 && front > 650)) {
+    Serial3.println("B2");
+    Stop();  // 只调用一次 Stop
+    foundB2 = true;
+}
+
+if (foundC == false && (front > 500 && front < 800) && (left > 300 && left < 500) && (right > 300) ){
     Serial.println("posC");
     Serial3.println("posC");
-    Stop();
-    Stop();
-    Stop();
-    Stop();
+    Stop();  // 只调用一次 Stop
     foundC = true;
-  }
+}
+
   // Case 2: going back and forth in hallway
   else if ((left >= 45 || right >= 45) && TURN_COUNTER >= 2) {
     Serial.println("Dead-end detected. Attempting to escape.");
@@ -773,16 +816,16 @@ bool make_decision(float readings[], String cmd_list[]) {
       add_to_cmd_list("Back 1.0");
       add_to_cmd_list("Right 90.0");
     }
-  } else if (diag_left <= 68) {
+  } else if (diag_left <= 65) {
     Serial.println("Diagonal obstacle on left. Correcting path.");
     Stop();
-    Back(0.5);
+    Back(1);
     Right(10.0);
     add_to_cmd_list("Back 0.98");
-  } else if (diag_right <= 68) {
+  } else if (diag_right <= 65) {
     Serial.println("Diagonal obstacle on right. Correcting path.");
     Stop();
-    Back(0.5);
+    Back(1);
     Left(10.0);
     add_to_cmd_list("Back 0.98");
   } else {
