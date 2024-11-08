@@ -719,7 +719,7 @@ def receive_lidar_data(line):
 def update_orientation_toward_target(current_orientation, target_orientation):
     """Update orientation by rotating toward the target orientation."""
     while current_orientation != target_orientation:
-        transmit(packetize("xx"))
+        # transmit(packetize("xx"))
         # Calculate the angular difference, normalized to -180 to 180 range
         angle_diff = (target_orientation - current_orientation + 180) % 360 - 180
         
@@ -727,21 +727,29 @@ def update_orientation_toward_target(current_orientation, target_orientation):
         if angle_diff == 180 or angle_diff == -180:
             # Turn left if target is counterclockwise from current
             cmd = TURN_AROUND
+            transmit(packetize("r0: 180"))
 
         elif angle_diff == 90:
             # Turn right if target is clockwise from current
             cmd = TURN_RIGHT
+            transmit(packetize("r0: 90"))
+            time.sleep(1)
             
         elif angle_diff == -90:
             cmd = TURN_LEFT
+            transmit(packetize("r0: -90"))
+            time.sleep(1)
 
         elif angle_diff == 45:
             cmd = 'r0: 45'
+            transmit(packetize("r0: 45"))
+        else:
+            return current_orientation, False
         # Transmit rotation command
         print("difference is", target_orientation - current_orientation)
         print("calculated difference", angle_diff)
         print("command sent to arduino is", cmd)
-        transmit(packetize(cmd))
+        
         # print(f"Turning to target orientation response: {response_string(cmd, responses)}")
         time.sleep(5)  # Small delay to complete the rotation
         _, current_orientation =run_localization(ser)
@@ -969,9 +977,9 @@ if __name__ == "__main__":
     new_cmd_received = False
     new_lidar_received = False
     initial_lidar_received = False
-    target = "B1"
+    target = "B2"
 
-
+ 
 
     # lidar_data_32 = True
     try: 
@@ -981,28 +989,22 @@ if __name__ == "__main__":
         print("Connected to Arduino")
         updated_position_index, current_orientation = run_localization(ser)
 
-        while updated_position_index not in loadingZone:
+        # while updated_position_index not in loadingZone:
             
-            pos_key, current_orientation = ensure_position_stability(ser)
-            # Rotate toward target until aligned
-            print(pos_key)
-            if pos_key == 'loadingZone':
-                break
-            target_orientation = get_target_orientation(pos_key)
-            transmit(packetize("xx"))
-            print(target_orientation)
-            current_orientation, aligned = update_orientation_toward_target(current_orientation, target_orientation)
-
-            updated_position_index, current_orientation = run_localization(ser)
-
-        transmit(packetize('r0: 380'))
-        print("LZ arrived, heading to positionC")
-
-        # while updated_position_index in loadingZone:
+        #     pos_key, current_orientation = ensure_position_stability(ser)
         #     # Rotate toward target until aligned
-        #     target_orientation = 90
+        #     print(pos_key)
+        #     if pos_key == 'loadingZone':
+        #         break
+        #     target_orientation = get_target_orientation(pos_key)
+        #     transmit(packetize("xx"))
+        #     print(target_orientation)
         #     current_orientation, aligned = update_orientation_toward_target(current_orientation, target_orientation)
+
         #     updated_position_index, current_orientation = run_localization(ser)
+
+        # transmit(packetize('r0: 380'))
+        # print("LZ arrived, heading to positionC")
 
         while updated_position_index in loadingZone:
             # Rotate toward target until aligned
@@ -1018,58 +1020,83 @@ if __name__ == "__main__":
                 notposC = False
                 print('notposC reading', notposC, line)
                 break
-        #     pos_key, current_orientation = ensure_position_stability(ser)
-        # # Rotate toward target until aligned
-        #     print(pos_key)
-        #     if pos_key == 'pos5':
-        #         target_orientation = 270
-        #         current_orientation, aligned = update_orientation_toward_target(current_orientation, target_orientation)
             updated_position_index, current_orientation = run_localization(ser)
             print("looking for posC")
-        # transmit(packetize("xxx"))
         print('posC now')
 
         if target == 'B1':
-            transmit(packetize("r0: -90"))
-            transmit(packetize("w0: 13"))
+            time.sleep(1)
+            packet_tx = packetize(TURN_LEFT)
+            print(TURN_LEFT, packet_tx)
+            if packet_tx:
+                transmit(packet_tx)
+            print("sent")
+            print("asking to turn to B1")
+            # target_orientation = 0
+            # current_orientation, aligned = update_orientation_toward_target(current_orientation, target_orientation)
+            # while current_orientation != 0:
+            #     packet_tx = packetize(TURN_LEFT)
+            #     print(TURN_LEFT, packet_tx)
+            #     if packet_tx:
+            #         transmit(packet_tx)
+            #         current_orientation, aligned = update_orientation_toward_target(current_orientation, target_orientation)
+            # transmit(packetize("w0: 13"))
             print("arrived B1")
+
             
-
-
         elif target == 'B2':
+            time.sleep(1)
             transmit(packetize("r0: 90"))
-            transmit(packetize("w0: 6"))
+            # target_orientation = 180
+            # current_orientation, aligned = update_orientation_toward_target(current_orientation, target_orientation)
+            # while current_orientation != 180:
+            #     current_orientation, aligned = update_orientation_toward_target(current_orientation, target_orientation)
+            # target_orientation = 180
+            # current_orientation, aligned = update_orientation_toward_target(current_orientation, target_orientation)
+            # transmit(packetize("w0: 6"))
             pos_key = ''
             updated_position_index, current_orientation = run_localization(ser)
-            while pos_key != "pos1":
-                pos_key, current_orientation = ensure_position_stability(ser)
-            transmit(packetize("xx"))
-            transmit(packetize("r0: 90"))
-            transmit(packetize("w0: 13"))
+            line = ""
+            while line != "B2":
+                line = ser.readline().decode('utf-8').strip()
+                if line == "B2":
+                    print("B2 found!")
+                    time.sleep(0.6)
+                    transmit(packetize("r0: 90"))
+                    # target_orientation = 0
+                    # current_orientation, aligned = update_orientation_toward_target(current_orientation, target_orientation)
+                    break
+                updated_position_index, current_orientation = run_localization(ser)
+            # transmit(packetize("xxx"))
+            # time.sleep(1)
+            # current_orientation, aligned = update_orientation_toward_target(current_orientation, target_orientation)
+           
+            # while updated_position_index not in pos1:
+            #     pdated_position_index, current_orientation = run_localization(ser)
+           
+            
             print("arrived B2")
             
 
         elif target == 'B3':
-            while updated_position_index not in posC:
-                updated_position_index, current_orientation = run_localization(ser)
-            current_orientation, aligned = update_orientation_toward_target(current_orientation, 90)
+            time.sleep(1)
+            transmit(packetize("w0: 4"))
             while updated_position_index not in pos5:
                 updated_position_index, current_orientation = run_localization(ser)
-            transmit(packetize("xx"))
-            current_orientation, aligned = update_orientation_toward_target(current_orientation, 0)
+            # transmit(packetize("xx"))
+            target_orientation = 0
+            current_orientation, aligned = update_orientation_toward_target(current_orientation, target_orientation)
+            # current_orientation, aligned = update_orientation_toward_target(current_orientation, 0)
             time.sleep(1)
-            while True:
-                transmit(packetize("xx"))
 
         elif target == 'B4':
-            while updated_position_index not in posC:
-                updated_position_index, current_orientation = run_localization(ser)
+            time.sleep(1)
+            transmit(packetize("w0: 4"))
             current_orientation, aligned = update_orientation_toward_target(current_orientation, 90)
             while updated_position_index not in pos6:
                 updated_position_index, current_orientation = run_localization(ser)
             time.sleep(4) # to be changed!
-            while True:
-                transmit(packetize("xx"))
+
 
     except KeyboardInterrupt:
         print("Stopped by user.")
