@@ -20,3 +20,5 @@ Mechatronics robot simulator written in python. This is version 1.2.0.
 
 This simulator requires Python 3.12 or above, pygame 2.6 or above, numpy 1.26 or above, and shapely 2.05 or above to be installed.
 Other versions of these packages may work, but are not guaranteed to.
+
+![pro-uQf8OIuS](https://github.com/user-attachments/assets/4255ab42-5a16-46b3-ada2-d54c76698c04)
